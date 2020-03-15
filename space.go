@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/minio/minio-go/v6"
+	"github.com/lebenasa/space/service"
 )
 
 // Space access client to limit what can be done programatically to our Spaces.

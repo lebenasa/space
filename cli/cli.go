@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"space"
+
+	"github.com/lebenasa/space"
 
 	"github.com/urfave/cli/v2"
 )
@@ -19,13 +20,13 @@ func handleEnum(val string, enums []string) (value string, err error) {
 }
 
 func handleEnvFlag(val string) (string, error) {
-	return handleEnum(c.String("env"), []string{
+	return handleEnum(val, []string{
 		"dev",
 		"live",
 	})
 }
 
-func pushFolder(s Space, env, folder, prefix string) {
+func pushFolder(s space.Space, env, folder, prefix string) {
 }
 
 func pushAction(c *cli.Context) error {
@@ -34,7 +35,7 @@ func pushAction(c *cli.Context) error {
 		return err
 	}
 
-	s := space.New(service.SPACE_ENDPOINT)
+	s := space.New()
 
 	fp := c.Args().Get(0)
 	prefix := c.String("prefix")
