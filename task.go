@@ -1,45 +1,28 @@
 package space
 
-import (
-	"context"
-	"fmt"
-	"os"
-	"path"
-	"path/filepath"
-)
-
 // Collection of routine tasks like uploading a folder.
 // Suitable for CLI.
 
-// Environments in Space to work with. Maps to bucket name.
-var environments = map[string]string{
-	"dev":     "dev",
-	"staging": "dev",
-	"live":    "dev",
-}
+import (
+	"context"
+	"os"
+	"path"
+	"path/filepath"
+
+	"github.com/lebenasa/space/service"
+)
 
 // WithTags that will be set to all files uploaded with `Upload*` functions.
-func (s Space) WithTags(tags map[string]string) (s Space) {
+func (s Space) WithTags(tags map[string]string) Space {
 	s.tags = tags
 	return s
 }
 
-// GetBucket name from given environment name.
-func GetBucket(env string) (string, error) {
-	envs := make([]string, len(environments))
-	for key := range environments {
-		envs = append(envs, key)
-		if key == env {
-			return env, nil
-		}
-	}
-	return "", fmt.Errorf("Invalid environment %v, possible values: %v", env, envs)
-}
-
 // UploadFile into Space. For large file (>100 MB) please use `UploadBigFile`.
 // If Space is created using `WithTags`, apply those tags into uploaded file.
+// Requires generated `service` module that's not tracked by git.
 func (s Space) UploadFile(ctx context.Context, fp, env, prefix string) (objectName string, err error) {
-	bucket, err := GetBucket(env)
+	bucket, err := service.GetBucket(env)
 	if err != nil {
 		return
 	}
@@ -61,14 +44,10 @@ func (s Space) UploadFile(ctx context.Context, fp, env, prefix string) (objectNa
 }
 
 // UploadFolder into Space. Do not use if there's a large file (>100 MB) inside the folder.
-func (s Space) UploadFolder(ctx context.Context, fp, env, prefix string) (objectNames []string, err error) {
-	bucket, err := GetBucket(env)
-	if err != nil {
-		return
-	}
-
-	filePaths := make([]string)
-	filepath.Walk(fp, func(fpath string, info os.FileInfo, err error) error {
+// Requires generated `service` module that's not tracked by git.
+func (s Space) UploadFolder(ctx context.Context, folder, env, prefix string) (objectNames []string, err error) {
+	filePaths := []string{}
+	filepath.Walk(folder, func(fpath string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
@@ -81,9 +60,14 @@ func (s Space) UploadFolder(ctx context.Context, fp, env, prefix string) (object
 
 	// TODO: do this concurrently
 	for _, filePath := range filePaths {
-		objectName, err := s.UploadFileWithContext(ctx, filePath, env, prefix)
-		if err != nil {
-			return
+		relativePath, errr := filepath.Rel(folder, filePath)
+		if errr != nil {
+			return objectNames, errr
+		}
+		relativePrefix := path.Join(prefix, filepath.Base(folder), filepath.ToSlash(relativePath))
+		objectName, errr := s.UploadFile(ctx, filePath, env, relativePrefix)
+		if errr != nil {
+			return objectNames, errr
 		}
 		objectNames = append(objectNames, objectName)
 	}

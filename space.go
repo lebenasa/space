@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/minio/minio-go/v6"
 	"github.com/lebenasa/space/service"
+	"github.com/minio/minio-go/v6"
 )
 
 // Space access client to limit what can be done programatically to our Spaces.
@@ -33,13 +33,20 @@ type GetObjectOptions = minio.GetObjectOptions
 // StatObjectOptions specifies additional headers when stating object in Space.
 type StatObjectOptions = minio.StatObjectOptions
 
-// New space client for a given endpoint.
-func New(endpoint string) (space Space, err error) {
-	client, err := minio.New(endpoint, service.SPACE_KEY, service.SPACE_SECRET, true)
+// New space client.
+// Requires generated `service` module that's not tracked by git.
+func New() (space Space, err error) {
+	client, err := minio.New(service.SPACE_ENDPOINT, service.SPACE_KEY, service.SPACE_SECRET, true)
 	if err != nil {
 		return space, err
 	}
 
+	space.client = client
+	return
+}
+
+// NewFromClient via `minio.New`.
+func NewFromClient(client *minio.Client) (space Space) {
 	space.client = client
 	return
 }
@@ -51,7 +58,7 @@ func (s Space) SetAppInfo(appName, appVersion string) {
 
 // ListBuckets in current endpoint.
 func (s Space) ListBuckets() ([]BucketInfo, error) {
-	return s.ListBuckets()
+	return s.client.ListBuckets()
 }
 
 // ListObjects inside a bucket.
@@ -103,12 +110,16 @@ func (s Space) Remove(bucketName, objectName string) error {
 // RemoveObjects in Space.
 func (s Space) RemoveObjects(ctx context.Context, bucketName string, objectNames []string) (err error) {
 	objectsCh := make(chan string)
-	for _, name := range objectNames {
-		objectsCh <- name
-	}
+
+	go func() {
+		defer close(objectsCh)
+		for _, name := range objectNames {
+			objectsCh <- name
+		}
+	}()
 
 	for rErr := range s.client.RemoveObjectsWithContext(ctx, bucketName, objectsCh) {
-		err = fmt.Errorf("%v\n%v", err, rErr)
+		err = fmt.Errorf("%v\nFailed to remove %v: %v", err, rErr.ObjectName, rErr)
 	}
 
 	return err
@@ -119,7 +130,7 @@ func (s Space) PutTag(ctx context.Context, bucketName, objectName string, tags m
 	return s.client.PutObjectTaggingWithContext(ctx, bucketName, objectName, tags)
 }
 
-// GetTag of an object in Space.
+// GetTag of an object in Space. Returned string is in XML format.
 func (s Space) GetTag(ctx context.Context, bucketName, objectName string) (string, error) {
 	return s.client.GetObjectTaggingWithContext(ctx, bucketName, objectName)
 }
