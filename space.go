@@ -110,12 +110,16 @@ func (s Space) Remove(bucketName, objectName string) error {
 // RemoveObjects in Space.
 func (s Space) RemoveObjects(ctx context.Context, bucketName string, objectNames []string) (err error) {
 	objectsCh := make(chan string)
-	for _, name := range objectNames {
-		objectsCh <- name
-	}
+
+	go func() {
+		defer close(objectsCh)
+		for _, name := range objectNames {
+			objectsCh <- name
+		}
+	}()
 
 	for rErr := range s.client.RemoveObjectsWithContext(ctx, bucketName, objectsCh) {
-		err = fmt.Errorf("%v\n%v", err, rErr)
+		err = fmt.Errorf("%v\nFailed to remove %v: %v", err, rErr.ObjectName, rErr)
 	}
 
 	return err
@@ -126,7 +130,7 @@ func (s Space) PutTag(ctx context.Context, bucketName, objectName string, tags m
 	return s.client.PutObjectTaggingWithContext(ctx, bucketName, objectName, tags)
 }
 
-// GetTag of an object in Space.
+// GetTag of an object in Space. Returned string is in XML format.
 func (s Space) GetTag(ctx context.Context, bucketName, objectName string) (string, error) {
 	return s.client.GetObjectTaggingWithContext(ctx, bucketName, objectName)
 }
