@@ -148,6 +148,10 @@ func TestGet(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	err = os.RemoveAll("./tmp")
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func setupPutFile(objectName, filePath string, s space.Space, bucket string) error {
