@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/lebenasa/space"
+	"github.com/lebenasa/space/service"
 
 	"github.com/urfave/cli/v2"
 )
@@ -26,7 +29,24 @@ func handleEnvFlag(val string) (string, error) {
 	})
 }
 
-func pushFolder(s space.Space, env, folder, prefix string) {
+func pushFolder(folder string, s space.Space, env string, prefix string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*60*time.Second)
+	defer cancel()
+
+	// TODO: verify uploaded files
+	_, err := s.UploadFolder(ctx, folder, env, prefix)
+	return err
+}
+
+func pushFile(fileName string, s space.Space, env string, prefix string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*60*time.Second)
+	defer cancel()
+
+	// TODO: verify uploaded file
+	log.Printf("Uploading %v\n", fileName)
+	objectName, err := s.UploadFile(ctx, fileName, env, prefix)
+	log.Printf("Uploaded to %v\n", objectName)
+	return err
 }
 
 func pushAction(c *cli.Context) error {
@@ -35,22 +55,28 @@ func pushAction(c *cli.Context) error {
 		return err
 	}
 
-	s := space.New()
+	s, err := space.New(service.SPACE_ENDPOINT)
+	if err != nil {
+		return err
+	}
 
 	fp := c.Args().Get(0)
+	if fp == "" {
+		return fmt.Errorf("Invalid file/folder: '%v'", fp)
+	}
+
 	prefix := c.String("prefix")
 	if c.Bool("recursive") {
-		return pushFolder(env, fp, prefix)
+		return pushFolder(fp, s, env, prefix)
 	}
-	return pushFile(env, fp, prefix)
+	return pushFile(fp, s, env, prefix)
 }
 
 func main() {
 	envFlag := cli.StringFlag{
-		Name:     "env",
-		Value:    "dev",
-		Usage:    "Specify Space environment",
-		Required: true,
+		Name:  "env",
+		Value: "dev",
+		Usage: "Specify Space environment",
 	}
 
 	pushCommand := cli.Command{

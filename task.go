@@ -13,13 +13,13 @@ import (
 
 // Environments in Space to work with. Maps to bucket name.
 var environments = map[string]string{
-	"dev":     "dev",
-	"staging": "dev",
-	"live":    "dev",
+	"dev":     "space-dev",
+	"staging": "space-dev",
+	"live":    "space-dev",
 }
 
 // WithTags that will be set to all files uploaded with `Upload*` functions.
-func (s Space) WithTags(tags map[string]string) (s Space) {
+func (s Space) WithTags(tags map[string]string) Space {
 	s.tags = tags
 	return s
 }
@@ -62,12 +62,7 @@ func (s Space) UploadFile(ctx context.Context, fp, env, prefix string) (objectNa
 
 // UploadFolder into Space. Do not use if there's a large file (>100 MB) inside the folder.
 func (s Space) UploadFolder(ctx context.Context, fp, env, prefix string) (objectNames []string, err error) {
-	bucket, err := GetBucket(env)
-	if err != nil {
-		return
-	}
-
-	filePaths := make([]string)
+	filePaths := []string{}
 	filepath.Walk(fp, func(fpath string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
@@ -81,9 +76,9 @@ func (s Space) UploadFolder(ctx context.Context, fp, env, prefix string) (object
 
 	// TODO: do this concurrently
 	for _, filePath := range filePaths {
-		objectName, err := s.UploadFileWithContext(ctx, filePath, env, prefix)
-		if err != nil {
-			return
+		objectName, errr := s.UploadFile(ctx, filePath, env, prefix)
+		if errr != nil {
+			return objectNames, errr
 		}
 		objectNames = append(objectNames, objectName)
 	}
