@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/minio/minio-go/v6"
 	"github.com/lebenasa/space/service"
+	"github.com/minio/minio-go/v6"
 )
 
 // Space access client to limit what can be done programatically to our Spaces.
@@ -51,7 +51,7 @@ func (s Space) SetAppInfo(appName, appVersion string) {
 
 // ListBuckets in current endpoint.
 func (s Space) ListBuckets() ([]BucketInfo, error) {
-	return s.ListBuckets()
+	return s.client.ListBuckets()
 }
 
 // ListObjects inside a bucket.

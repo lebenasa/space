@@ -1,22 +1,16 @@
 package space
 
-import (
-	"context"
-	"fmt"
-	"os"
-	"path"
-	"path/filepath"
-)
-
 // Collection of routine tasks like uploading a folder.
 // Suitable for CLI.
 
-// Environments in Space to work with. Maps to bucket name.
-var environments = map[string]string{
-	"dev":     "space-dev",
-	"staging": "space-dev",
-	"live":    "space-dev",
-}
+import (
+	"context"
+	"os"
+	"path"
+	"path/filepath"
+
+	"github.com/lebenasa/space/service"
+)
 
 // WithTags that will be set to all files uploaded with `Upload*` functions.
 func (s Space) WithTags(tags map[string]string) Space {
@@ -24,22 +18,10 @@ func (s Space) WithTags(tags map[string]string) Space {
 	return s
 }
 
-// GetBucket name from given environment name.
-func GetBucket(env string) (string, error) {
-	envs := make([]string, len(environments))
-	for key := range environments {
-		envs = append(envs, key)
-		if key == env {
-			return env, nil
-		}
-	}
-	return "", fmt.Errorf("Invalid environment %v, possible values: %v", env, envs)
-}
-
 // UploadFile into Space. For large file (>100 MB) please use `UploadBigFile`.
 // If Space is created using `WithTags`, apply those tags into uploaded file.
 func (s Space) UploadFile(ctx context.Context, fp, env, prefix string) (objectName string, err error) {
-	bucket, err := GetBucket(env)
+	bucket, err := service.GetBucket(env)
 	if err != nil {
 		return
 	}
