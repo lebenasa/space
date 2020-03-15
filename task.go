@@ -43,9 +43,9 @@ func (s Space) UploadFile(ctx context.Context, fp, env, prefix string) (objectNa
 }
 
 // UploadFolder into Space. Do not use if there's a large file (>100 MB) inside the folder.
-func (s Space) UploadFolder(ctx context.Context, fp, env, prefix string) (objectNames []string, err error) {
+func (s Space) UploadFolder(ctx context.Context, folder, env, prefix string) (objectNames []string, err error) {
 	filePaths := []string{}
-	filepath.Walk(fp, func(fpath string, info os.FileInfo, err error) error {
+	filepath.Walk(folder, func(fpath string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
@@ -58,7 +58,12 @@ func (s Space) UploadFolder(ctx context.Context, fp, env, prefix string) (object
 
 	// TODO: do this concurrently
 	for _, filePath := range filePaths {
-		objectName, errr := s.UploadFile(ctx, filePath, env, prefix)
+		relativePath, errr := filepath.Rel(folder, filePath)
+		if errr != nil {
+			return objectNames, errr
+		}
+		relativePrefix := path.Join(prefix, filepath.Base(folder), filepath.ToSlash(relativePath))
+		objectName, errr := s.UploadFile(ctx, filePath, env, relativePrefix)
 		if errr != nil {
 			return objectNames, errr
 		}

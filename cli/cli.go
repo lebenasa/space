@@ -79,8 +79,17 @@ func pushFolder(folder string, s space.Space, env string, prefix string) error {
 	defer cancel()
 
 	// TODO: verify uploaded files
-	_, err := s.UploadFolder(ctx, folder, env, prefix)
-	return err
+	log.Printf("Uploading %v\n", folder)
+	objectNames, err := s.UploadFolder(ctx, folder, env, prefix)
+	if err != nil {
+		return err
+	}
+
+	for _, objectName := range objectNames {
+		log.Printf("Uploaded %v\n", objectName)
+	}
+
+	return nil
 }
 
 func pushFile(fileName string, s space.Space, env string, prefix string) error {
@@ -90,8 +99,12 @@ func pushFile(fileName string, s space.Space, env string, prefix string) error {
 	// TODO: verify uploaded file
 	log.Printf("Uploading %v\n", fileName)
 	objectName, err := s.UploadFile(ctx, fileName, env, prefix)
+	if err != nil {
+		return err
+	}
+
 	log.Printf("Uploaded to %v\n", objectName)
-	return err
+	return nil
 }
 
 func pushAction(c *cli.Context) error {
