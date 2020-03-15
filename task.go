@@ -20,6 +20,7 @@ func (s Space) WithTags(tags map[string]string) Space {
 
 // UploadFile into Space. For large file (>100 MB) please use `UploadBigFile`.
 // If Space is created using `WithTags`, apply those tags into uploaded file.
+// Requires generated `service` module that's not tracked by git.
 func (s Space) UploadFile(ctx context.Context, fp, env, prefix string) (objectName string, err error) {
 	bucket, err := service.GetBucket(env)
 	if err != nil {
@@ -43,6 +44,7 @@ func (s Space) UploadFile(ctx context.Context, fp, env, prefix string) (objectNa
 }
 
 // UploadFolder into Space. Do not use if there's a large file (>100 MB) inside the folder.
+// Requires generated `service` module that's not tracked by git.
 func (s Space) UploadFolder(ctx context.Context, folder, env, prefix string) (objectNames []string, err error) {
 	filePaths := []string{}
 	filepath.Walk(folder, func(fpath string, info os.FileInfo, err error) error {

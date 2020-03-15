@@ -33,13 +33,20 @@ type GetObjectOptions = minio.GetObjectOptions
 // StatObjectOptions specifies additional headers when stating object in Space.
 type StatObjectOptions = minio.StatObjectOptions
 
-// New space client for a given endpoint.
-func New(endpoint string) (space Space, err error) {
-	client, err := minio.New(endpoint, service.SPACE_KEY, service.SPACE_SECRET, true)
+// New space client.
+// Requires generated `service` module that's not tracked by git.
+func New() (space Space, err error) {
+	client, err := minio.New(service.SPACE_ENDPOINT, service.SPACE_KEY, service.SPACE_SECRET, true)
 	if err != nil {
 		return space, err
 	}
 
+	space.client = client
+	return
+}
+
+// NewFromClient via `minio.New`.
+func NewFromClient(client *minio.Client) (space Space) {
 	space.client = client
 	return
 }

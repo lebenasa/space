@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/lebenasa/space"
-	"github.com/lebenasa/space/service"
 
 	"github.com/urfave/cli/v2"
 )
@@ -41,7 +40,7 @@ func listAction(c *cli.Context) error {
 		bucket = bucketAndPrefix
 	}
 
-	s, err := space.New(service.SPACE_ENDPOINT)
+	s, err := space.New()
 	if err != nil {
 		return err
 	}
@@ -113,7 +112,7 @@ func pushAction(c *cli.Context) error {
 		return err
 	}
 
-	s, err := space.New(service.SPACE_ENDPOINT)
+	s, err := space.New()
 	if err != nil {
 		return err
 	}
