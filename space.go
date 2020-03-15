@@ -33,15 +33,14 @@ type GetObjectOptions = minio.GetObjectOptions
 type StatObjectOptions = minio.StatObjectOptions
 
 // New space client for a given endpoint.
-func New(endpoint string) (client Space, err error) {
+func New(endpoint string) (space Space, err error) {
 	client, err := minio.New(endpoint, service.SPACE_KEY, service.SPACE_SECRET, true)
 	if err != nil {
-		return err
+		return space, err
 	}
 
-	return Space{
-		client: client,
-	}
+	space.client = client
+	return
 }
 
 // SetAppInfo adds custom application details to User-Agent.
@@ -59,19 +58,19 @@ func (s Space) ListObjects(bucketName string, objectPrefix string, recursive boo
 	doneCh := make(chan struct{})
 	defer close(doneCh)
 
-	objectCh := s._client.ListObjectsV2(bucketName, objectPrefix, recursive, doneCh)
+	objectCh := s.client.ListObjectsV2(bucketName, objectPrefix, recursive, doneCh)
 	for object := range objectCh {
 		if object.Err != nil {
 			return nil, object.Err
 		}
-		append(objects, object)
+		objects = append(objects, object)
 	}
 
 	return objects, err
 }
 
 // Put object to Space.
-func (s Space) Put(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, options PutObjectOptions) (int, error) {
+func (s Space) Put(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, options PutObjectOptions) (int64, error) {
 	return s.client.PutObjectWithContext(ctx, bucketName, objectName, reader, objectSize, options)
 }
 
@@ -91,7 +90,7 @@ func (s Space) GetFile(ctx context.Context, bucketName, objectName, filePath str
 }
 
 // Stat of an object in Space.
-func (s Space) Stat(bucketName, objectName string, options StatObjectOptions) ObjectInfo {
+func (s Space) Stat(bucketName, objectName string, options StatObjectOptions) (ObjectInfo, error) {
 	return s.client.StatObject(bucketName, objectName, options)
 }
 
