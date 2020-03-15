@@ -1,13 +1,11 @@
 package space
 
 import (
-	".space/service"
 	"context"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
-	"time"
 )
 
 // Collection of routine tasks like uploading a folder.
@@ -29,7 +27,7 @@ func (s Space) WithTags(tags map[string]string) (s Space) {
 // GetBucket name from given environment name.
 func GetBucket(env string) (string, error) {
 	envs := make([]string, len(environments))
-	for key, _ := range environments {
+	for key := range environments {
 		envs = append(envs, key)
 		if key == env {
 			return env, nil
