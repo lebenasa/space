@@ -2,7 +2,6 @@ package space
 
 import (
 	"context"
-	"deploy/service"
 	"fmt"
 	"io"
 
@@ -12,6 +11,7 @@ import (
 // Space access client to limit what can be done programatically to our Spaces.
 type Space struct {
 	client *minio.Client
+	tags   map[string]string
 }
 
 // Object represents an open object.
