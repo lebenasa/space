@@ -117,6 +117,8 @@ func pushAction(c *cli.Context) error {
 		return err
 	}
 
+	s = s.WithTags(parseTags(c.String("tags")))
+
 	fp := c.Args().Get(0)
 	if fp == "" {
 		return fmt.Errorf("Invalid file/folder: '%v'", fp)
@@ -129,6 +131,27 @@ func pushAction(c *cli.Context) error {
 	return pushFile(fp, s, env, prefix)
 }
 
+func parseTags(text string) (tags map[string]string) {
+	pairs := strings.Split(text, ",")
+	if pairs[0] == text {
+		return
+	}
+	kv := func(keyval []string) (string, string) {
+		if len(keyval) != 2 {
+			return "", ""
+		}
+		return strings.TrimSpace(keyval[0]), strings.TrimSpace(keyval[1])
+	}
+	for _, pair := range pairs {
+		key, val := kv(strings.Split(pair, ":"))
+		if key == "" {
+			continue
+		}
+		tags[key] = val
+	}
+	return tags
+}
+
 func main() {
 	envFlag := cli.StringFlag{
 		Name:  "env",
@@ -138,7 +161,7 @@ func main() {
 
 	listCommand := cli.Command{
 		Name:      "list",
-		Usage:     "List available buckets or objects in Space",
+		Usage:     "List available buckets or objects in Space. Not a good idea for production bucket.",
 		ArgsUsage: "If given, list all objects in {bucket}/{prefix}, otherwise list all buckets",
 		Flags: []cli.Flag{
 			&envFlag,
@@ -162,6 +185,12 @@ func main() {
 				Name:    "prefix",
 				Aliases: []string{"p"},
 				Usage:   "Object name's prefix.",
+				Value:   "",
+			},
+			&cli.StringFlag{
+				Name:    "tags",
+				Aliases: []string{"t"},
+				Usage:   "Add tags, e.g. \"version: 0.0, type: app\"",
 				Value:   "",
 			},
 		},
