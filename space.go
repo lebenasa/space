@@ -36,7 +36,7 @@ type StatObjectOptions = minio.StatObjectOptions
 // New space client.
 // Requires generated `service` module that's not tracked by git.
 func New() (space Space, err error) {
-	client, err := minio.New(service.SPACE_ENDPOINT, service.SPACE_KEY, service.SPACE_SECRET, true)
+	client, err := minio.New(service.SpaceEndpoint, service.SpaceKey, service.SpaceSecret, true)
 	if err != nil {
 		return space, err
 	}
