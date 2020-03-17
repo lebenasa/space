@@ -1,10 +1,9 @@
-package main
+package cli
 
 import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 
@@ -29,36 +28,21 @@ func handleEnvFlag(val string) (string, error) {
 	})
 }
 
-func listAction(c *cli.Context) error {
-	bucketAndPrefix := c.Args().First()
-	var bucket, prefix string
-	split := strings.SplitN(bucketAndPrefix, "/", 2)
-	if len(split) == 2 {
-		bucket = split[0]
-		prefix = split[1]
-	} else {
-		bucket = bucketAndPrefix
-	}
-
-	s, err := space.New()
+func listObjects(s space.Space, bucket, prefix string) error {
+	log.Printf("Listing objects from %v with prefix '%v'\n", bucket, prefix)
+	objects, err := s.ListObjects(bucket, prefix, true)
 	if err != nil {
 		return err
 	}
 
-	if bucket != "" {
-		log.Printf("Listing objects from %v with prefix '%v'\n", bucket, prefix)
-		objects, err := s.ListObjects(bucket, prefix, true)
-		if err != nil {
-			return err
-		}
-
-		log.Println("Object\t\t\tSize\t\tLast modified")
-		for _, object := range objects {
-			log.Printf("%v\t\t%v\t\t%v\n", object.Key, object.Size, object.LastModified)
-		}
-		return nil
+	log.Println("Object\t\t\tSize\t\tLast modified")
+	for _, object := range objects {
+		log.Printf("%v\t\t%v\t\t%v\n", object.Key, object.Size, object.LastModified)
 	}
+	return nil
+}
 
+func listBuckets(s space.Space) error {
 	log.Println("Listing all buckets")
 	buckets, err := s.ListBuckets()
 	if err != nil {
@@ -71,6 +55,21 @@ func listAction(c *cli.Context) error {
 	}
 
 	return nil
+}
+
+func listAction(c *cli.Context) error {
+	bucket, prefix := parseBucketAndPrefix(c.Args().First())
+
+	s, err := space.New()
+	if err != nil {
+		return err
+	}
+
+	if bucket != "" {
+		return listObjects(s, bucket, prefix)
+	}
+
+	return listBuckets(s)
 }
 
 func pushFolder(folder string, s space.Space, env string, prefix string) error {
@@ -131,6 +130,17 @@ func pushAction(c *cli.Context) error {
 	return pushFile(fp, s, env, prefix)
 }
 
+func parseBucketAndPrefix(text string) (bucket, prefix string) {
+	split := strings.SplitN(text, "/", 2)
+	if len(split) == 2 {
+		bucket = split[0]
+		prefix = split[1]
+	} else {
+		bucket = text
+	}
+	return bucket, prefix
+}
+
 func parseTags(text string) (tags map[string]string) {
 	pairs := strings.Split(text, ",")
 	if pairs[0] == text {
@@ -152,7 +162,8 @@ func parseTags(text string) (tags map[string]string) {
 	return tags
 }
 
-func main() {
+// Run using arguments from `argv` provider function.
+func Run(argv func() []string) (err error) {
 	envFlag := cli.StringFlag{
 		Name:  "env",
 		Value: "dev",
@@ -206,8 +217,6 @@ func main() {
 		},
 	}
 
-	err := app.Run(os.Args)
-	if err != nil {
-		log.Fatal(err)
-	}
+	err = app.Run(argv())
+	return err
 }
