@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -12,6 +13,30 @@ import (
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/urfave/cli/v2"
 )
+
+func downloadAction(c *cli.Context) error {
+	objectName := c.Args().Get(0)
+	if objectName == "" {
+		return cli.Exit("No Space object given.", 2)
+	}
+	fileName := filepath.Base(objectName)
+	if c.String("output") != "" {
+		fileName = c.String("output")
+	}
+
+	env, err := handleEnvFlag(c.String("env"))
+	if err != nil {
+		return err
+	}
+
+	s, err := space.New()
+	if err != nil {
+		return err
+	}
+
+	err = s.DownloadFile(context.Background(), objectName, fileName, env)
+	return err
+}
 
 func handleEnum(val string, enums []string) (value string, err error) {
 	for _, enum := range enums {
@@ -227,6 +252,23 @@ func Run(argv []string) (err error) {
 		Usage: "Specify Space environment",
 	}
 
+	downloadCommand := cli.Command{
+		Name:      "pull",
+		Aliases:   []string{"download"},
+		Usage:     "Download file from Space",
+		ArgsUsage: "Space object's name",
+		Flags: []cli.Flag{
+			&envFlag,
+			&cli.StringFlag{
+				Name:    "output",
+				Aliases: []string{"o"},
+				Usage:   "Output file, otherwise use object's name",
+				Value:   "",
+			},
+		},
+		Action: downloadAction,
+	}
+
 	listInternalCommand := cli.Command{
 		Name:      "list-internal",
 		Usage:     "List available buckets or objects in Space. Not a good idea for production bucket.",
@@ -251,6 +293,7 @@ func Run(argv []string) (err error) {
 
 	pushCommand := cli.Command{
 		Name:      "push",
+		Aliases:   []string{"upload"},
 		Usage:     "Upload file/folder to Space",
 		ArgsUsage: "File or folder path to upload",
 		Flags: []cli.Flag{
@@ -292,6 +335,7 @@ func Run(argv []string) (err error) {
 		Name:  "space",
 		Usage: "Work with Space and assets",
 		Commands: []*cli.Command{
+			&downloadCommand,
 			&listInternalCommand,
 			&listCommand,
 			&pushCommand,

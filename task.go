@@ -76,7 +76,7 @@ func (s Space) UploadFolder(ctx context.Context, folder, env, prefix string) (ob
 		if errr != nil {
 			return objectNames, errr
 		}
-		relativePrefix := path.Join(prefix, filepath.Base(folder), filepath.ToSlash(relativePath))
+		relativePrefix := path.Join(prefix, filepath.Dir(folder), filepath.ToSlash(filepath.Dir(relativePath)))
 		objectName, errr := s.UploadFile(ctx, filePath, env, relativePrefix)
 		if errr != nil {
 			return objectNames, errr
@@ -85,6 +85,16 @@ func (s Space) UploadFolder(ctx context.Context, folder, env, prefix string) (ob
 	}
 
 	return
+}
+
+// DownloadFile from Space.
+func (s Space) DownloadFile(ctx context.Context, objectName, filePath, env string) error {
+	bucket, err := service.GetBucket(env)
+	if err != nil {
+		return err
+	}
+
+	return s.GetFile(ctx, bucket, objectName, filePath, GetObjectOptions{})
 }
 
 // RemoveFiles from Space.
