@@ -2,8 +2,6 @@ package cli_test
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/lebenasa/space/cli"
@@ -55,8 +53,8 @@ func TestListObjects(t *testing.T) {
 	}
 }
 
-func setupPushFolder(t *testing.T) (path string, objectNames []string) {
-	path = "./cli"
+func setupPushFolder(t *testing.T) {
+	path := "./cli"
 	prefix := "test"
 
 	argv := []string{
@@ -67,36 +65,24 @@ func setupPushFolder(t *testing.T) (path string, objectNames []string) {
 		t.Errorf("push folder setup got error %v", err)
 	}
 
-	filepath.Walk(path, func(fpath string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			return nil
-		}
-
-		relpath, err := filepath.Rel(path, fpath)
-		if err != nil {
-			return err
-		}
-		objectName := fmt.Sprintf("%v/%v", prefix, relpath)
-		objectNames = append(objectNames, objectName)
-		return nil
-	})
-	fmt.Println(objectNames)
-
 	return
 }
 
-func teardownPushFolder(t *testing.T, objectNames []string) {
+func teardownPushFolder(t *testing.T) {
 	argv := []string{
 		"cli", "remove",
+		"test/cli/cli.go",
+		"test/cli/cli_test.go",
+		"test/cli/main/main.go",
 	}
-	argv = append(argv, objectNames...)
+	t.Log(argv)
 	err := cli.Run(argv)
 	if err != nil {
 		t.Errorf("push folder teardown got error %v", err)
 	}
 }
 
-func TestPushFolder(t *testing.T) {
-	_, objectNames := setupPushFolder(t)
-	teardownPushFolder(t, objectNames)
+func TestPushAndRemoveFolder(t *testing.T) {
+	setupPushFolder(t)
+	teardownPushFolder(t)
 }

@@ -47,8 +47,10 @@ func (s Space) UploadFile(ctx context.Context, fp, env, prefix string) (objectNa
 // Requires generated `service` module that's not tracked by git.
 func (s Space) UploadFolder(ctx context.Context, folder, env, prefix string) (objectNames []string, err error) {
 	filePaths := []string{}
-	folderPath := filepath.Dir(folder)
-	filepath.Walk(folderPath, func(fpath string, info os.FileInfo, err error) error {
+	filepath.Walk(folder, func(fpath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if info.IsDir() {
 			return nil
 		}

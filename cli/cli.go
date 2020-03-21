@@ -85,17 +85,11 @@ func pushFolder(folder string, s space.Space, env string, prefix string) error {
 	defer cancel()
 
 	// TODO: verify uploaded files
-	fmt.Printf("Uploading %v\n", folder)
 	objectNames, err := s.UploadFolder(ctx, folder, env, prefix)
-	if err != nil {
-		return err
+	for _, name := range objectNames {
+		fmt.Println(name)
 	}
-
-	for _, objectName := range objectNames {
-		fmt.Printf("Uploaded %v\n", objectName)
-	}
-
-	return nil
+	return err
 }
 
 func pushFile(fileName string, s space.Space, env string, prefix string) error {
@@ -112,14 +106,9 @@ func pushFile(fileName string, s space.Space, env string, prefix string) error {
 	}
 
 	// TODO: verify uploaded file
-	fmt.Printf("Uploading %v\n", fileName)
 	objectName, err := s.UploadFile(ctx, fileName, env, prefix)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Uploaded to %v\n", objectName)
-	return nil
+	fmt.Println(objectName)
+	return err
 }
 
 func pushAction(c *cli.Context) error {
@@ -201,7 +190,7 @@ func removeAction(c *cli.Context) error {
 	return s.RemoveFiles(ctx, env, objectNames)
 }
 
-// Run using arguments from `argv` provider function.
+// Run using arguments from `argv`.
 func Run(argv []string) (err error) {
 	envFlag := cli.StringFlag{
 		Name:  "env",
@@ -255,6 +244,7 @@ func Run(argv []string) (err error) {
 		Flags: []cli.Flag{
 			&envFlag,
 		},
+		Action: removeAction,
 	}
 
 	app := &cli.App{
