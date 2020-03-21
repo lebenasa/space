@@ -47,7 +47,8 @@ func (s Space) UploadFile(ctx context.Context, fp, env, prefix string) (objectNa
 // Requires generated `service` module that's not tracked by git.
 func (s Space) UploadFolder(ctx context.Context, folder, env, prefix string) (objectNames []string, err error) {
 	filePaths := []string{}
-	filepath.Walk(folder, func(fpath string, info os.FileInfo, err error) error {
+	folderPath := filepath.Dir(folder)
+	filepath.Walk(folderPath, func(fpath string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
@@ -73,4 +74,15 @@ func (s Space) UploadFolder(ctx context.Context, folder, env, prefix string) (ob
 	}
 
 	return
+}
+
+// RemoveFiles from Space.
+func (s Space) RemoveFiles(ctx context.Context, env string, objectNames []string) (err error) {
+	bucket, err := service.GetBucket(env)
+	if err != nil {
+		return
+	}
+
+	err = s.RemoveObjects(ctx, bucket, objectNames)
+	return err
 }

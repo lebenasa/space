@@ -102,6 +102,15 @@ func pushFile(fileName string, s space.Space, env string, prefix string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*60*time.Second)
 	defer cancel()
 
+	fi, err := os.Stat(fileName)
+	if err != nil {
+		return err
+	}
+
+	if fi.IsDir() {
+		return fmt.Errorf("%v is a directory, push with --recursive flag", fileName)
+	}
+
 	// TODO: verify uploaded file
 	fmt.Printf("Uploading %v\n", fileName)
 	objectName, err := s.UploadFile(ctx, fileName, env, prefix)
@@ -170,6 +179,28 @@ func parseTags(text string) (tags map[string]string) {
 	return tags
 }
 
+func removeAction(c *cli.Context) error {
+	env, err := handleEnvFlag(c.String("env"))
+	if err != nil {
+		return err
+	}
+
+	s, err := space.New()
+	if err != nil {
+		return err
+	}
+
+	objectNames := make([]string, c.Args().Len())
+	for i := range objectNames {
+		objectNames[i] = c.Args().Get(i)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*60*time.Second)
+	defer cancel()
+
+	return s.RemoveFiles(ctx, env, objectNames)
+}
+
 // Run using arguments from `argv` provider function.
 func Run(argv []string) (err error) {
 	envFlag := cli.StringFlag{
@@ -216,12 +247,23 @@ func Run(argv []string) (err error) {
 		Action: pushAction,
 	}
 
+	removeCommand := cli.Command{
+		Name:      "remove",
+		Aliases:   []string{"rm"},
+		Usage:     "Remove file(s) in Space",
+		ArgsUsage: "Files to be removed",
+		Flags: []cli.Flag{
+			&envFlag,
+		},
+	}
+
 	app := &cli.App{
 		Name:  "space",
 		Usage: "Work with Space and assets",
 		Commands: []*cli.Command{
 			&listCommand,
 			&pushCommand,
+			&removeCommand,
 		},
 	}
 
