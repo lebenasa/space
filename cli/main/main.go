@@ -4,11 +4,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/lebenasa/cli"
+	"github.com/lebenasa/space/cli"
 )
 
 func main() {
-	err := cli.Run(func() []string { return os.Args })
+	err := cli.Run(os.Args)
 	if err != nil {
 		log.Fatalln(err)
 	}

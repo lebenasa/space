@@ -3,11 +3,13 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/lebenasa/space"
 
+	"github.com/jedib0t/go-pretty/table"
 	"github.com/urfave/cli/v2"
 )
 
@@ -34,24 +36,31 @@ func listObjects(s space.Space, bucket, prefix string) error {
 		return err
 	}
 
-	fmt.Println("Object\t\t\tSize\t\tLast modified")
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Object", "Size", "Last modified"})
 	for _, object := range objects {
-		fmt.Printf("%v\t\t%v\t\t%v\n", object.Key, object.Size, object.LastModified)
+		t.AppendRow([]interface{}{object.Key, object.Size, object.LastModified})
 	}
+	t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
+	t.Render()
 	return nil
 }
 
 func listBuckets(s space.Space) error {
-	fmt.Println("Listing all buckets")
 	buckets, err := s.ListBuckets()
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Bucket\t\t\tCreated on")
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Bucket", "Created on"})
 	for _, bucket := range buckets {
-		fmt.Printf("%v\t\t\t%v\n", bucket.Name, bucket.CreationDate)
+		t.AppendRow([]interface{}{bucket.Name, bucket.CreationDate})
 	}
+	t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
+	t.Render()
 
 	return nil
 }

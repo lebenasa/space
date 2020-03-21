@@ -4,6 +4,9 @@ go 1.13
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
+	github.com/go-openapi/strfmt v0.19.5 // indirect
+	github.com/jedib0t/go-pretty v4.3.0+incompatible
+	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/minio/minio-go/v6 v6.0.49
 	github.com/urfave/cli/v2 v2.2.0
 	golang.org/x/crypto v0.0.0-20200311171314-f7b00557c8c4 // indirect
