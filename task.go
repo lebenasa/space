@@ -18,6 +18,15 @@ func (s Space) WithTags(tags map[string]string) Space {
 	return s
 }
 
+func (s Space) List(env, prefix string) (objects []ObjectInfo, err error) {
+	bucket, err := service.GetBucket(env)
+	if err != nil {
+		return
+	}
+	objects, err = s.ListObjects(bucket, prefix, true)
+	return
+}
+
 // UploadFile into Space. For large file (>100 MB) please use `UploadBigFile`.
 // If Space is created using `WithTags`, apply those tags into uploaded file.
 // Requires generated `service` module that's not tracked by git.
@@ -48,6 +57,9 @@ func (s Space) UploadFile(ctx context.Context, fp, env, prefix string) (objectNa
 func (s Space) UploadFolder(ctx context.Context, folder, env, prefix string) (objectNames []string, err error) {
 	filePaths := []string{}
 	filepath.Walk(folder, func(fpath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if info.IsDir() {
 			return nil
 		}
@@ -64,7 +76,7 @@ func (s Space) UploadFolder(ctx context.Context, folder, env, prefix string) (ob
 		if errr != nil {
 			return objectNames, errr
 		}
-		relativePrefix := path.Join(prefix, filepath.Base(folder), filepath.ToSlash(relativePath))
+		relativePrefix := path.Join(prefix, filepath.Dir(folder), filepath.ToSlash(filepath.Dir(relativePath)))
 		objectName, errr := s.UploadFile(ctx, filePath, env, relativePrefix)
 		if errr != nil {
 			return objectNames, errr
@@ -73,4 +85,25 @@ func (s Space) UploadFolder(ctx context.Context, folder, env, prefix string) (ob
 	}
 
 	return
+}
+
+// DownloadFile from Space.
+func (s Space) DownloadFile(ctx context.Context, objectName, filePath, env string) error {
+	bucket, err := service.GetBucket(env)
+	if err != nil {
+		return err
+	}
+
+	return s.GetFile(ctx, bucket, objectName, filePath, GetObjectOptions{})
+}
+
+// RemoveFiles from Space.
+func (s Space) RemoveFiles(ctx context.Context, env string, objectNames []string) (err error) {
+	bucket, err := service.GetBucket(env)
+	if err != nil {
+		return
+	}
+
+	err = s.RemoveObjects(ctx, bucket, objectNames)
+	return err
 }

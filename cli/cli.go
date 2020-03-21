@@ -1,17 +1,42 @@
-package main
+package cli
 
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/lebenasa/space"
 
+	"github.com/jedib0t/go-pretty/table"
 	"github.com/urfave/cli/v2"
 )
+
+func downloadAction(c *cli.Context) error {
+	objectName := c.Args().Get(0)
+	if objectName == "" {
+		return cli.Exit("No Space object given.", 2)
+	}
+	fileName := filepath.Base(objectName)
+	if c.String("output") != "" {
+		fileName = c.String("output")
+	}
+
+	env, err := handleEnvFlag(c.String("env"))
+	if err != nil {
+		return err
+	}
+
+	s, err := space.New()
+	if err != nil {
+		return err
+	}
+
+	err = s.DownloadFile(context.Background(), objectName, fileName, env)
+	return err
+}
 
 func handleEnum(val string, enums []string) (value string, err error) {
 	for _, enum := range enums {
@@ -29,16 +54,44 @@ func handleEnvFlag(val string) (string, error) {
 	})
 }
 
-func listAction(c *cli.Context) error {
-	bucketAndPrefix := c.Args().First()
-	var bucket, prefix string
-	split := strings.SplitN(bucketAndPrefix, "/", 2)
-	if len(split) == 2 {
-		bucket = split[0]
-		prefix = split[1]
-	} else {
-		bucket = bucketAndPrefix
+func listObjects(s space.Space, bucket, prefix string) error {
+	fmt.Printf("Listing objects from %v with prefix '%v'\n", bucket, prefix)
+	objects, err := s.ListObjects(bucket, prefix, true)
+	if err != nil {
+		return err
 	}
+
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Object", "Size", "Last modified"})
+	for _, object := range objects {
+		t.AppendRow([]interface{}{object.Key, object.Size, object.LastModified})
+	}
+	t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
+	t.Render()
+	return nil
+}
+
+func listBuckets(s space.Space) error {
+	buckets, err := s.ListBuckets()
+	if err != nil {
+		return err
+	}
+
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Bucket", "Created on"})
+	for _, bucket := range buckets {
+		t.AppendRow([]interface{}{bucket.Name, bucket.CreationDate})
+	}
+	t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
+	t.Render()
+
+	return nil
+}
+
+func listInternalAction(c *cli.Context) error {
+	bucket, prefix := parseBucketAndPrefix(c.Args().First())
 
 	s, err := space.New()
 	if err != nil {
@@ -46,29 +99,37 @@ func listAction(c *cli.Context) error {
 	}
 
 	if bucket != "" {
-		log.Printf("Listing objects from %v with prefix '%v'\n", bucket, prefix)
-		objects, err := s.ListObjects(bucket, prefix, true)
-		if err != nil {
-			return err
-		}
-
-		log.Println("Object\t\t\tSize\t\tLast modified")
-		for _, object := range objects {
-			log.Printf("%v\t\t%v\t\t%v\n", object.Key, object.Size, object.LastModified)
-		}
-		return nil
+		return listObjects(s, bucket, prefix)
 	}
 
-	log.Println("Listing all buckets")
-	buckets, err := s.ListBuckets()
+	return listBuckets(s)
+}
+
+func listAction(c *cli.Context) error {
+	env, err := handleEnvFlag(c.String("env"))
 	if err != nil {
 		return err
 	}
 
-	log.Println("Bucket\t\t\tCreated on")
-	for _, bucket := range buckets {
-		log.Printf("%v\t\t\t%v\n", bucket.Name, bucket.CreationDate)
+	s, err := space.New()
+	if err != nil {
+		return err
 	}
+
+	prefix := c.Args().First()
+	objects, err := s.List(env, prefix)
+	if err != nil {
+		return err
+	}
+
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Object", "Size", "Last modified"})
+	for _, object := range objects {
+		t.AppendRow([]interface{}{object.Key, object.Size, object.LastModified})
+	}
+	t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
+	t.Render()
 
 	return nil
 }
@@ -78,32 +139,30 @@ func pushFolder(folder string, s space.Space, env string, prefix string) error {
 	defer cancel()
 
 	// TODO: verify uploaded files
-	log.Printf("Uploading %v\n", folder)
 	objectNames, err := s.UploadFolder(ctx, folder, env, prefix)
-	if err != nil {
-		return err
+	for _, name := range objectNames {
+		fmt.Println(name)
 	}
-
-	for _, objectName := range objectNames {
-		log.Printf("Uploaded %v\n", objectName)
-	}
-
-	return nil
+	return err
 }
 
 func pushFile(fileName string, s space.Space, env string, prefix string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*60*time.Second)
 	defer cancel()
 
-	// TODO: verify uploaded file
-	log.Printf("Uploading %v\n", fileName)
-	objectName, err := s.UploadFile(ctx, fileName, env, prefix)
+	fi, err := os.Stat(fileName)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Uploaded to %v\n", objectName)
-	return nil
+	if fi.IsDir() {
+		return fmt.Errorf("%v is a directory, push with --recursive flag", fileName)
+	}
+
+	// TODO: verify uploaded file
+	objectName, err := s.UploadFile(ctx, fileName, env, prefix)
+	fmt.Println(objectName)
+	return err
 }
 
 func pushAction(c *cli.Context) error {
@@ -117,6 +176,8 @@ func pushAction(c *cli.Context) error {
 		return err
 	}
 
+	s = s.WithTags(parseTags(c.String("tags")))
+
 	fp := c.Args().Get(0)
 	if fp == "" {
 		return fmt.Errorf("Invalid file/folder: '%v'", fp)
@@ -129,17 +190,101 @@ func pushAction(c *cli.Context) error {
 	return pushFile(fp, s, env, prefix)
 }
 
-func main() {
+func parseBucketAndPrefix(text string) (bucket, prefix string) {
+	split := strings.SplitN(text, "/", 2)
+	if len(split) == 2 {
+		bucket = split[0]
+		prefix = split[1]
+	} else {
+		bucket = text
+	}
+	return bucket, prefix
+}
+
+func parseTags(text string) (tags map[string]string) {
+	pairs := strings.Split(text, ",")
+	if pairs[0] == text {
+		return
+	}
+	kv := func(keyval []string) (string, string) {
+		if len(keyval) != 2 {
+			return "", ""
+		}
+		return strings.TrimSpace(keyval[0]), strings.TrimSpace(keyval[1])
+	}
+	for _, pair := range pairs {
+		key, val := kv(strings.Split(pair, ":"))
+		if key == "" {
+			continue
+		}
+		tags[key] = val
+	}
+	return tags
+}
+
+func removeAction(c *cli.Context) error {
+	env, err := handleEnvFlag(c.String("env"))
+	if err != nil {
+		return err
+	}
+
+	s, err := space.New()
+	if err != nil {
+		return err
+	}
+
+	objectNames := make([]string, c.Args().Len())
+	for i := range objectNames {
+		objectNames[i] = c.Args().Get(i)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*60*time.Second)
+	defer cancel()
+
+	return s.RemoveFiles(ctx, env, objectNames)
+}
+
+// Run using arguments from `argv`.
+func Run(argv []string) (err error) {
 	envFlag := cli.StringFlag{
 		Name:  "env",
 		Value: "dev",
 		Usage: "Specify Space environment",
 	}
 
+	downloadCommand := cli.Command{
+		Name:      "pull",
+		Aliases:   []string{"download"},
+		Usage:     "Download file from Space",
+		ArgsUsage: "Space object's name",
+		Flags: []cli.Flag{
+			&envFlag,
+			&cli.StringFlag{
+				Name:    "output",
+				Aliases: []string{"o"},
+				Usage:   "Output file, otherwise use object's name",
+				Value:   "",
+			},
+		},
+		Action: downloadAction,
+	}
+
+	listInternalCommand := cli.Command{
+		Name:      "list-internal",
+		Usage:     "List available buckets or objects in Space. Not a good idea for production bucket.",
+		ArgsUsage: "If given, list all objects in {bucket}/{prefix}, otherwise list all buckets",
+		HideHelp:  true,
+		Hidden:    true,
+		Flags: []cli.Flag{
+			&envFlag,
+		},
+		Action: listInternalAction,
+	}
+
 	listCommand := cli.Command{
 		Name:      "list",
-		Usage:     "List available buckets or objects in Space",
-		ArgsUsage: "If given, list all objects in {bucket}/{prefix}, otherwise list all buckets",
+		Usage:     "List available objects in Space.",
+		ArgsUsage: "Prefix",
 		Flags: []cli.Flag{
 			&envFlag,
 		},
@@ -148,6 +293,7 @@ func main() {
 
 	pushCommand := cli.Command{
 		Name:      "push",
+		Aliases:   []string{"upload"},
 		Usage:     "Upload file/folder to Space",
 		ArgsUsage: "File or folder path to upload",
 		Flags: []cli.Flag{
@@ -164,21 +310,39 @@ func main() {
 				Usage:   "Object name's prefix.",
 				Value:   "",
 			},
+			&cli.StringFlag{
+				Name:    "tags",
+				Aliases: []string{"t"},
+				Usage:   "Add tags, e.g. \"version: 0.0, type: app\"",
+				Value:   "",
+			},
 		},
 		Action: pushAction,
+	}
+
+	removeCommand := cli.Command{
+		Name:      "remove",
+		Aliases:   []string{"rm"},
+		Usage:     "Remove file(s) in Space",
+		ArgsUsage: "Files to be removed",
+		Flags: []cli.Flag{
+			&envFlag,
+		},
+		Action: removeAction,
 	}
 
 	app := &cli.App{
 		Name:  "space",
 		Usage: "Work with Space and assets",
 		Commands: []*cli.Command{
+			&downloadCommand,
+			&listInternalCommand,
 			&listCommand,
 			&pushCommand,
+			&removeCommand,
 		},
 	}
 
-	err := app.Run(os.Args)
-	if err != nil {
-		log.Fatal(err)
-	}
+	err = app.Run(argv)
+	return err
 }
