@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -29,29 +28,29 @@ func handleEnvFlag(val string) (string, error) {
 }
 
 func listObjects(s space.Space, bucket, prefix string) error {
-	log.Printf("Listing objects from %v with prefix '%v'\n", bucket, prefix)
+	fmt.Printf("Listing objects from %v with prefix '%v'\n", bucket, prefix)
 	objects, err := s.ListObjects(bucket, prefix, true)
 	if err != nil {
 		return err
 	}
 
-	log.Println("Object\t\t\tSize\t\tLast modified")
+	fmt.Println("Object\t\t\tSize\t\tLast modified")
 	for _, object := range objects {
-		log.Printf("%v\t\t%v\t\t%v\n", object.Key, object.Size, object.LastModified)
+		fmt.Printf("%v\t\t%v\t\t%v\n", object.Key, object.Size, object.LastModified)
 	}
 	return nil
 }
 
 func listBuckets(s space.Space) error {
-	log.Println("Listing all buckets")
+	fmt.Println("Listing all buckets")
 	buckets, err := s.ListBuckets()
 	if err != nil {
 		return err
 	}
 
-	log.Println("Bucket\t\t\tCreated on")
+	fmt.Println("Bucket\t\t\tCreated on")
 	for _, bucket := range buckets {
-		log.Printf("%v\t\t\t%v\n", bucket.Name, bucket.CreationDate)
+		fmt.Printf("%v\t\t\t%v\n", bucket.Name, bucket.CreationDate)
 	}
 
 	return nil
@@ -77,14 +76,14 @@ func pushFolder(folder string, s space.Space, env string, prefix string) error {
 	defer cancel()
 
 	// TODO: verify uploaded files
-	log.Printf("Uploading %v\n", folder)
+	fmt.Printf("Uploading %v\n", folder)
 	objectNames, err := s.UploadFolder(ctx, folder, env, prefix)
 	if err != nil {
 		return err
 	}
 
 	for _, objectName := range objectNames {
-		log.Printf("Uploaded %v\n", objectName)
+		fmt.Printf("Uploaded %v\n", objectName)
 	}
 
 	return nil
@@ -95,13 +94,13 @@ func pushFile(fileName string, s space.Space, env string, prefix string) error {
 	defer cancel()
 
 	// TODO: verify uploaded file
-	log.Printf("Uploading %v\n", fileName)
+	fmt.Printf("Uploading %v\n", fileName)
 	objectName, err := s.UploadFile(ctx, fileName, env, prefix)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Uploaded to %v\n", objectName)
+	fmt.Printf("Uploaded to %v\n", objectName)
 	return nil
 }
 
@@ -163,7 +162,7 @@ func parseTags(text string) (tags map[string]string) {
 }
 
 // Run using arguments from `argv` provider function.
-func Run(argv func() []string) (err error) {
+func Run(argv []string) (err error) {
 	envFlag := cli.StringFlag{
 		Name:  "env",
 		Value: "dev",
@@ -217,6 +216,6 @@ func Run(argv func() []string) (err error) {
 		},
 	}
 
-	err = app.Run(argv())
+	err = app.Run(argv)
 	return err
 }

@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/lebenasa/space/cli"
@@ -8,18 +9,16 @@ import (
 )
 
 func TestListBucket(t *testing.T) {
-	argvFn := func() []string {
-		return []string{
-			"cli", "list",
-		}
+	argv := []string{
+		"cli", "list",
 	}
 
-	err := cli.Run(argvFn)
+	err := cli.Run(argv)
 	if err != nil {
 		t.Errorf("case 1 got error %v", err)
 	}
 
-	spaceKey := service.SpaceEndpoint
+	spaceKey := service.SpaceKey
 	service.SpaceKey = "test"
 
 	err = cli.Run(argv)
@@ -30,27 +29,26 @@ func TestListBucket(t *testing.T) {
 }
 
 func setupPushFolder(t *testing.T) (path string, objectNames []string) {
-	path = "./cli"
-	prefix := "test"
+	// path = "./cli"
+	// prefix := "test"
 
-	argv := []string{
-		"cli", "push", "-r", "--prefix", prefix, path,
-	}
-	argvFn := func() []string {
-		return argv
-	}
+	// argv := []string{
+	// 	"cli", "push", "-r", "--prefix", prefix, path,
+	// }
+	return
 }
 
 func TestListObjects(t *testing.T) {
-	devBucket := service.GetBucket("dev")
+	devBucket, err := service.GetBucket("dev")
+	if err != nil {
+		t.Error(err)
+	}
+
 	argv := []string{
 		"cli", "list", devBucket,
 	}
-	argvFn := func() []string {
-		return argv
-	}
 
-	err := cli.Run(argvFn)
+	err = cli.Run(argv)
 	if err != nil {
 		t.Errorf("case 1 got error %v", err)
 	}
@@ -59,7 +57,7 @@ func TestListObjects(t *testing.T) {
 		"cli", "list", fmt.Sprintf("%v/test", devBucket),
 	}
 
-	err := cli.Run(argvFn)
+	err = cli.Run(argv)
 	if err != nil {
 		t.Errorf("case 1 got error %v", err)
 	}

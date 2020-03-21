@@ -19,17 +19,17 @@ func TestNew(t *testing.T) {
 		t.Errorf("case 1 got %v, want nil error", err)
 	}
 
-	endpoint := service.SPACE_ENDPOINT
-	service.SPACE_ENDPOINT = "https://foo.bar.com"
+	endpoint := service.SpaceEndpoint
+	service.SpaceEndpoint = "https://foo.bar.com"
 	_, err = space.New()
-	service.SPACE_ENDPOINT = endpoint
+	service.SpaceEndpoint = endpoint
 	if err == nil {
 		t.Errorf("case 2 got %v, want error", err)
 	}
 }
 
 func TestNewFromClient(t *testing.T) {
-	client, _ := minio.New(service.SPACE_ENDPOINT, service.SPACE_KEY, service.SPACE_SECRET, true)
+	client, _ := minio.New(service.SpaceEndpoint, service.SpaceKey, service.SpaceSecret, true)
 	s := space.NewFromClient(client)
 	s.SetAppInfo("test", "0.0.0")
 	if _, err := s.ListBuckets(); err != nil {
