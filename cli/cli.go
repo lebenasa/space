@@ -65,7 +65,7 @@ func listBuckets(s space.Space) error {
 	return nil
 }
 
-func listAction(c *cli.Context) error {
+func listInternalAction(c *cli.Context) error {
 	bucket, prefix := parseBucketAndPrefix(c.Args().First())
 
 	s, err := space.New()
@@ -78,6 +78,35 @@ func listAction(c *cli.Context) error {
 	}
 
 	return listBuckets(s)
+}
+
+func listAction(c *cli.Context) error {
+	env, err := handleEnvFlag(c.String("env"))
+	if err != nil {
+		return err
+	}
+
+	s, err := space.New()
+	if err != nil {
+		return err
+	}
+
+	prefix := c.Args().First()
+	objects, err := s.List(env, prefix)
+	if err != nil {
+		return err
+	}
+
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Object", "Size", "Last modified"})
+	for _, object := range objects {
+		t.AppendRow([]interface{}{object.Key, object.Size, object.LastModified})
+	}
+	t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
+	t.Render()
+
+	return nil
 }
 
 func pushFolder(folder string, s space.Space, env string, prefix string) error {
@@ -198,10 +227,21 @@ func Run(argv []string) (err error) {
 		Usage: "Specify Space environment",
 	}
 
-	listCommand := cli.Command{
-		Name:      "list",
+	listInternalCommand := cli.Command{
+		Name:      "list-internal",
 		Usage:     "List available buckets or objects in Space. Not a good idea for production bucket.",
 		ArgsUsage: "If given, list all objects in {bucket}/{prefix}, otherwise list all buckets",
+		HideHelp:  true,
+		Flags: []cli.Flag{
+			&envFlag,
+		},
+		Action: listInternalAction,
+	}
+
+	listCommand := cli.Command{
+		Name:      "list",
+		Usage:     "List available objects in Space.",
+		ArgsUsage: "Prefix",
 		Flags: []cli.Flag{
 			&envFlag,
 		},
@@ -251,6 +291,7 @@ func Run(argv []string) (err error) {
 		Name:  "space",
 		Usage: "Work with Space and assets",
 		Commands: []*cli.Command{
+			&listInternalCommand,
 			&listCommand,
 			&pushCommand,
 			&removeCommand,

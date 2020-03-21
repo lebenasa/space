@@ -18,6 +18,15 @@ func (s Space) WithTags(tags map[string]string) Space {
 	return s
 }
 
+func (s Space) List(env, prefix string) (objects []ObjectInfo, err error) {
+	bucket, err := service.GetBucket(env)
+	if err != nil {
+		return
+	}
+	objects, err = s.ListObjects(bucket, prefix, true)
+	return
+}
+
 // UploadFile into Space. For large file (>100 MB) please use `UploadBigFile`.
 // If Space is created using `WithTags`, apply those tags into uploaded file.
 // Requires generated `service` module that's not tracked by git.

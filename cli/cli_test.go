@@ -10,7 +10,7 @@ import (
 
 func TestListBucket(t *testing.T) {
 	argv := []string{
-		"cli", "list",
+		"cli", "list-internal",
 	}
 
 	err := cli.Run(argv)
@@ -35,7 +35,7 @@ func TestListObjects(t *testing.T) {
 	}
 
 	argv := []string{
-		"cli", "list", devBucket,
+		"cli", "list-internal", devBucket,
 	}
 
 	err = cli.Run(argv)
@@ -48,6 +48,17 @@ func TestListObjects(t *testing.T) {
 	}
 
 	err = cli.Run(argv)
+	if err != nil {
+		t.Errorf("case 1 got error %v", err)
+	}
+}
+
+func TestList(t *testing.T) {
+	argv := []string{
+		"cli", "list",
+	}
+
+	err := cli.Run(argv)
 	if err != nil {
 		t.Errorf("case 1 got error %v", err)
 	}
