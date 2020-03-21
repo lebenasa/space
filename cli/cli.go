@@ -232,6 +232,7 @@ func Run(argv []string) (err error) {
 		Usage:     "List available buckets or objects in Space. Not a good idea for production bucket.",
 		ArgsUsage: "If given, list all objects in {bucket}/{prefix}, otherwise list all buckets",
 		HideHelp:  true,
+		Hidden:    true,
 		Flags: []cli.Flag{
 			&envFlag,
 		},
