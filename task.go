@@ -70,13 +70,18 @@ func (s Space) UploadFolder(ctx context.Context, folder, env, prefix string) (ob
 		return nil
 	})
 
+	objectPrefix := prefix
+	if objectPrefix == "" {
+		objectPrefix = filepath.Dir(folder)
+	}
+
 	// TODO: do this concurrently
 	for _, filePath := range filePaths {
 		relativePath, errr := filepath.Rel(folder, filePath)
 		if errr != nil {
 			return objectNames, errr
 		}
-		relativePrefix := path.Join(prefix, filepath.Dir(folder), filepath.ToSlash(filepath.Dir(relativePath)))
+		relativePrefix := path.Join(objectPrefix, filepath.ToSlash(filepath.Dir(relativePath)))
 		objectName, errr := s.UploadFile(ctx, filePath, env, relativePrefix)
 		if errr != nil {
 			return objectNames, errr
